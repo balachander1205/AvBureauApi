@@ -9,6 +9,7 @@ import java.io.OutputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
 
+import com.avanse.ftp.SMBService;
 import com.avanse.model.AddressBean;
 import com.avanse.model.AddressDetails;
 import com.avanse.model.CibilResponse;
@@ -40,6 +42,10 @@ import com.avanse.model.UserReferenceErrorSegment;
 import com.avanse.util.EncryptUtil;
 import com.avanse.util.PropertyReader;
 import com.avanse.util.SocketRequest;
+
+import jcifs.smb.NtlmPasswordAuthentication;
+import jcifs.smb.SmbFile;
+import jcifs.smb.SmbFileOutputStream;
 
 public class CustomerDetail {
 
@@ -688,7 +694,7 @@ public class CustomerDetail {
 				responseList = new ArrayList<CibilResponse>();
 				responseList.add(cibilResponse);
 				// Code added on 20/1/2021 to save pdf report to folder for easy access.
-				getCibilReportContent(tempResponseList, cibilResponse);
+				getCibilReportContent(tempResponseList, cibilResponse, headers.get("user_id"));
 				return responseList;
 			}
 
@@ -768,7 +774,7 @@ public class CustomerDetail {
 				responseList = new ArrayList<CibilResponse>();
 				responseList.add(cibilResponse);
 				// Code added on 20/1/2021 to save pdf report to folder for easy access.
-				getCibilReportContent(tempResponseList, cibilResponse);
+				getCibilReportContent(tempResponseList, cibilResponse, userId);
 				return responseList;
 			}
 
@@ -984,7 +990,7 @@ public class CustomerDetail {
 				responseList = new ArrayList<CibilResponse>();
 				responseList.add(cibilResponse);
 				// Code added on 20/1/2021 to save pdf report to folder for easy access.
-				getCibilReportContent(tempResponseList, cibilResponse);
+				getCibilReportContent(tempResponseList, cibilResponse, userId);
 				return responseList;
 
 			}
@@ -1160,7 +1166,7 @@ public class CustomerDetail {
 				responseList = new ArrayList<CibilResponse>();
 				responseList.add(cibilResponse);
 				// Code added on 20/1/2021 to save pdf report to folder for easy access.
-				getCibilReportContent(tempResponseList, cibilResponse);
+				getCibilReportContent(tempResponseList, cibilResponse, userId);
 				return responseList;
 			}
 			if (resp_type == 6) {
@@ -1360,7 +1366,7 @@ public class CustomerDetail {
 				responseList = new ArrayList<CibilResponse>();
 				responseList.add(cibilResponse);
 				// Code added on 20/1/2021 to save pdf report to folder for easy access.
-				getCibilReportContent(tempResponseList, cibilResponse);
+				getCibilReportContent(tempResponseList, cibilResponse, userId);
 				return responseList;
 
 			}
@@ -1555,7 +1561,7 @@ public class CustomerDetail {
 				responseList = new ArrayList<CibilResponse>();
 				responseList.add(cibilResponse);
 				// Code added on 20/1/2021 to save pdf report to folder for easy access.
-				getCibilReportContent(tempResponseList, cibilResponse);
+				getCibilReportContent(tempResponseList, cibilResponse, userId);
 				return responseList;
 
 			}
@@ -1866,7 +1872,7 @@ public class CustomerDetail {
 				responseList = new ArrayList<CibilResponse>();
 				responseList.add(cibilResponse);
 				// Code added on 20/1/2021 to save pdf report to folder for easy access.
-				getCibilReportContent(tempResponseList, cibilResponse);
+				getCibilReportContent(tempResponseList, cibilResponse, headers.get("user_id"));
 				return responseList;
 			}
 
@@ -1882,7 +1888,7 @@ public class CustomerDetail {
 			responseList = new ArrayList<CibilResponse>();
 			responseList.add(cibilResponse);
 			// Code added on 20/1/2021 to save pdf report to folder for easy access.
-			getCibilReportContent(tempResponseList, cibilResponse);
+			getCibilReportContent(tempResponseList, cibilResponse, headers.get("user_id"));
 			return responseList;
 		}
 		return null;
@@ -2245,7 +2251,7 @@ public class CustomerDetail {
 		return dao.validateRequest(ncr);
 	}
 	
-	public void getCibilReportContent(List<CibilResponse> responseList, CibilResponse cibilResponse) {
+	public void getCibilReportContent(List<CibilResponse> responseList, CibilResponse cibilResponse, String userId) {
 		// Code added on 20/1/2021 to save pdf report to folder for easy access.
 		try {
 			ParseCibilResponse parseCibilResponse = new ParseCibilResponse();
@@ -2253,7 +2259,9 @@ public class CustomerDetail {
 			ByteArrayOutputStream out = parseCibilResponse.getCibilReport(responseList);
 			System.out.println("Started saving PDF report to folder..Srno=" + cibilResponse.getSrNo());
 			// saving PDF to folder
-			savePdfFileToFolder(cibilResponse.getPdfContent(), cibilResponse.getSrNo() + ".pdf", out);
+			SMBService smbService = new SMBService();
+			//savePdfFileToFolder(cibilResponse.getPdfContent(), cibilResponse.getSrNo() + ".pdf", out);
+			smbService.saveCIBILReportToFolder(cibilResponse.getSrNo() + ".pdf", out, userId);
 			System.out.println("Completed saving PDF report to folder..Srno=" + cibilResponse.getSrNo());
 		} catch (Exception e) {
 			System.out.println("Exception:While saving PDF tp folder=" + e);
@@ -2269,10 +2277,11 @@ public class CustomerDetail {
 			outStream = new FileOutputStream(PropertyReader.getProperty("cibilPdfFilePath") + fileName);
 			byteOutStream.writeTo(outStream);
 			outStream.close();
+			//getSMBFiles();
 			// write base64 string to File and save to folder for easy access.
 		}catch (Exception e) {
 			System.out.println("Xception:savePdfFileToFolder="+e);
 		}
 		return "";
-	}
+	}	
 }
