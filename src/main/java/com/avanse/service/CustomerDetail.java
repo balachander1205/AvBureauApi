@@ -694,7 +694,7 @@ public class CustomerDetail {
 				responseList = new ArrayList<CibilResponse>();
 				responseList.add(cibilResponse);
 				// Code added on 20/1/2021 to save pdf report to folder for easy access.
-				getCibilReportContent(tempResponseList, cibilResponse, headers.get("user_id"));
+				responseList = getCibilReportContent(tempResponseList, cibilResponse, headers.get("user_id"), responseList);
 				return responseList;
 			}
 
@@ -774,7 +774,7 @@ public class CustomerDetail {
 				responseList = new ArrayList<CibilResponse>();
 				responseList.add(cibilResponse);
 				// Code added on 20/1/2021 to save pdf report to folder for easy access.
-				getCibilReportContent(tempResponseList, cibilResponse, userId);
+				responseList = getCibilReportContent(tempResponseList, cibilResponse, userId, responseList);
 				return responseList;
 			}
 
@@ -990,7 +990,7 @@ public class CustomerDetail {
 				responseList = new ArrayList<CibilResponse>();
 				responseList.add(cibilResponse);
 				// Code added on 20/1/2021 to save pdf report to folder for easy access.
-				getCibilReportContent(tempResponseList, cibilResponse, userId);
+				responseList = getCibilReportContent(tempResponseList, cibilResponse, userId, responseList);
 				return responseList;
 
 			}
@@ -1166,7 +1166,7 @@ public class CustomerDetail {
 				responseList = new ArrayList<CibilResponse>();
 				responseList.add(cibilResponse);
 				// Code added on 20/1/2021 to save pdf report to folder for easy access.
-				getCibilReportContent(tempResponseList, cibilResponse, userId);
+				responseList = getCibilReportContent(tempResponseList, cibilResponse, userId, responseList);
 				return responseList;
 			}
 			if (resp_type == 6) {
@@ -1366,7 +1366,7 @@ public class CustomerDetail {
 				responseList = new ArrayList<CibilResponse>();
 				responseList.add(cibilResponse);
 				// Code added on 20/1/2021 to save pdf report to folder for easy access.
-				getCibilReportContent(tempResponseList, cibilResponse, userId);
+				responseList = getCibilReportContent(tempResponseList, cibilResponse, userId, responseList);
 				return responseList;
 
 			}
@@ -1561,7 +1561,7 @@ public class CustomerDetail {
 				responseList = new ArrayList<CibilResponse>();
 				responseList.add(cibilResponse);
 				// Code added on 20/1/2021 to save pdf report to folder for easy access.
-				getCibilReportContent(tempResponseList, cibilResponse, userId);
+				responseList = getCibilReportContent(tempResponseList, cibilResponse, userId, responseList);
 				return responseList;
 
 			}
@@ -1575,6 +1575,7 @@ public class CustomerDetail {
 				SimpleDateFormat sdf = new SimpleDateFormat("ddMMyyyy");
 
 				if (responseList.get(0).getAccountSegment() != null) {
+					int count = 0;
 					for (OwnAccountBean own : responseList.get(0).getAccountSegment().getOwnAccountBeanList()) {
 						String payHist = own.getPaymentHistory1();
 						if (payHist != null) {
@@ -1664,10 +1665,14 @@ public class CustomerDetail {
 							if (dateClosed != null && diff <= 180)
 								continue;
 							String sanctionedAmt = own.getHighCreditOrSanctionedAmount();
+							String currentBalance = own.getCurrentBalance();
+							String closeDate = own.getDateClosed();
 							// These lines of code get EMI against sanctioned amount to make it part of
 							// total obligation amount based on account type.
-							if (sanctionedAmt != null) {
-								double princAmt = Double.parseDouble(sanctionedAmt);
+							System.out.println("===================Started obligation calculation==================Record="+count++);
+							double princAmt = Double.parseDouble((sanctionedAmt!=null && sanctionedAmt.trim()!="")?sanctionedAmt:"0");
+							double princCurBal = Double.parseDouble((currentBalance!=null && currentBalance.trim()!="")?currentBalance:"0");							
+							if (sanctionedAmt != null && princCurBal>0 && (closeDate == null || closeDate.trim()=="")) {								
 								switch (accType) {
 								// acc type auto loan 01
 								case "01":
@@ -1675,6 +1680,7 @@ public class CustomerDetail {
 									//totalObligation += getEMI(princAmt, 12, 5);
 									// Code added on 8/1/2021 to calculate EMI for auto loan at ROI=2.20%
 									totalObligation += getEMI(princAmt, 2.20, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
 									break;
 								// acc type housing loan 02
 								case "02":
@@ -1682,6 +1688,7 @@ public class CustomerDetail {
 									//totalObligation += getEMI(princAmt, 9, 15);
 									// Code added on 8/1/2021 to calculate EMI for Housing loan at ROI=1%
 									totalObligation += getEMI(princAmt, 1, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
 									break;
 								// acc type personal loan 05
 								case "05":
@@ -1689,36 +1696,46 @@ public class CustomerDetail {
 									//totalObligation += getEMI(princAmt, 14, 3);
 									// Code added on 8/1/2021 to calculate EMI for personal loan at ROI=2.80%
 									totalObligation += getEMI(princAmt, 2.80, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
 									break;
 								// acc type consumer durable 06
 								case "06":
 									// Code added on 14/1/2021 to calculate EMI for consumer durable loan at ROI=9%
 									totalObligation += getEMI(princAmt, 9, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
 									break;
 								// acc type gold 07
 								case "07":
 									// Code added on 14/1/2021 to calculate EMI for gold loan at ROI=1.50%
 									totalObligation += getEMI(princAmt, 1.5, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
 									break;
 								// acc type education loan 8
 								case "08":
-									// Code added on 12/1/2021 to calculate EMI for personal loan at ROI=2.80%
+									// Code added on 12/1/2021 to calculate EMI for education loan at ROI=2.80%
 									totalObligation += getEMI(princAmt, 1.80, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
 									break;
 								// acc type credit card 10
 								case "10":
-									// Code added on 12/1/2021 to calculate EMI for personal loan at ROI=5%
+									// Code added on 12/1/2021 to calculate EMI for credit card at ROI=5%
+									if(princCurBal>0) {
+										princAmt = princCurBal;
+									}
 									totalObligation += getEMI(princAmt, 5, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
 									break;
 								// acc type two wheeler 13
 								case "13":
 									// Code added on 14/1/2021 to calculate EMI for two wheeler loan at ROI=4.30%
 									totalObligation += getEMI(princAmt, 4.30, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
 									break;
 								// acc type commercial vehicle 17
 								case "17":
 									// Code added on 18/1/2021 to calculate EMI for commercial vehicle loan at ROI=2.4%
 									totalObligation += getEMI(princAmt, 2.4, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
 									break;
 								// acc type business loan 51 to 60
 								case "51":
@@ -1735,6 +1752,7 @@ public class CustomerDetail {
 									//totalObligation += getEMI(princAmt, 18, 3);
 									// Code added on 8/1/2021 to calculate EMI for business loan at ROI=3.50%
 									totalObligation += getEMI(princAmt, 3.50, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
 									break;
 								}
 
@@ -1746,7 +1764,7 @@ public class CustomerDetail {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
-
+						System.out.println("===============End of Obligation calculation===================");
 					}
 
 					
@@ -1806,10 +1824,11 @@ public class CustomerDetail {
 								&& (writtOffSettStatus.equals("02") || writtOffSettStatus.equals("03"))) {
 							writtOffCount++;
 						}
-
+						System.out.println("writtOffSettStatus="+writtOffSettStatus+" writtOffCount="+writtOffCount);
 						if (wilfulDefault != null && wilfulDefault.equals("02")) {
 							willfulDefaultCount++;
 						}
+						System.out.println("wilfulDefault="+wilfulDefault+" willfulDefaultCount="+willfulDefaultCount);
 					}
 				}
 				cibilResponse = new CibilResponse();
@@ -1872,7 +1891,7 @@ public class CustomerDetail {
 				responseList = new ArrayList<CibilResponse>();
 				responseList.add(cibilResponse);
 				// Code added on 20/1/2021 to save pdf report to folder for easy access.
-				getCibilReportContent(tempResponseList, cibilResponse, headers.get("user_id"));
+				responseList = getCibilReportContent(tempResponseList, cibilResponse, headers.get("user_id"), responseList);
 				return responseList;
 			}
 
@@ -1888,19 +1907,22 @@ public class CustomerDetail {
 			responseList = new ArrayList<CibilResponse>();
 			responseList.add(cibilResponse);
 			// Code added on 20/1/2021 to save pdf report to folder for easy access.
-			getCibilReportContent(tempResponseList, cibilResponse, headers.get("user_id"));
+			responseList = getCibilReportContent(tempResponseList, cibilResponse, headers.get("user_id"), responseList);
 			return responseList;
 		}
 		return null;
 	}
-
-	public double getEMI(double principal, double rate, double time) {
-
+	
+	// Code commented on 03/02/2021
+	/*public double getEMI(double principal, double rate, double time) {
 		rate = rate / (12 * 100);
 		time = time * 12;
-
 		double emi = (principal * rate * Math.pow(1 + rate, time)) / (Math.pow(1 + rate, time) - 1);
-
+		return emi;
+	}*/
+	// Code added on 03/02/2021 with new EMI 
+	public double getEMI(double principal, double rate, double time) {
+		double emi = (principal * rate)/100;
 		return emi;
 	}
 
@@ -2251,12 +2273,12 @@ public class CustomerDetail {
 		return dao.validateRequest(ncr);
 	}
 	
-	public void getCibilReportContent(List<CibilResponse> responseList, CibilResponse cibilResponse, String userId) {
+	public List<CibilResponse> getCibilReportContent(List<CibilResponse> responseListTemp, CibilResponse cibilResponse, String userId, List<CibilResponse> responseList) {
 		// Code added on 20/1/2021 to save pdf report to folder for easy access.
 		try {
 			ParseCibilResponse parseCibilResponse = new ParseCibilResponse();
 			// getting PDF content as ByteArrayOutputStream
-			ByteArrayOutputStream out = parseCibilResponse.getCibilReport(responseList);
+			ByteArrayOutputStream out = parseCibilResponse.getCibilReport(responseListTemp);
 			System.out.println("Started saving PDF report to folder..Srno=" + cibilResponse.getSrNo());
 			// saving PDF to folder
 			SMBService smbService = new SMBService();
@@ -2265,23 +2287,8 @@ public class CustomerDetail {
 			System.out.println("Completed saving PDF report to folder..Srno=" + cibilResponse.getSrNo());
 		} catch (Exception e) {
 			System.out.println("Exception:While saving PDF tp folder=" + e);
+			return responseList;
 		}
-	}
-	public String savePdfFileToFolder(String content, String fileName, ByteArrayOutputStream byteOutStream) {
-		OutputStream outStream = null;		
-		try {
-			String filePath = PropertyReader.getProperty("cibilPdfFilePath");			
-			System.out.println("savePdfFileToFolder:content="+content);
-			System.out.println("savePdfFileToFolder:filePath="+filePath+"//"+fileName);
-			// Create file object
-			outStream = new FileOutputStream(PropertyReader.getProperty("cibilPdfFilePath") + fileName);
-			byteOutStream.writeTo(outStream);
-			outStream.close();
-			//getSMBFiles();
-			// write base64 string to File and save to folder for easy access.
-		}catch (Exception e) {
-			System.out.println("Xception:savePdfFileToFolder="+e);
-		}
-		return "";
+		return responseList;
 	}	
 }

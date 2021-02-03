@@ -12,13 +12,13 @@ import javax.naming.NamingException;
 import javax.sql.DataSource;
 
 
-public class ConnectionFactory {
+public class ConnectionFactory_Bkp25012021 {
 	
-	private static ConnectionFactory instance = new ConnectionFactory();
+	private static ConnectionFactory_Bkp25012021 instance = new ConnectionFactory_Bkp25012021();
 	DataSource dataSource = null;
 	
 	private  Connection con=null;
-	private ConnectionFactory() {
+	private ConnectionFactory_Bkp25012021() {
 		
 	}
 	
@@ -52,8 +52,7 @@ public class ConnectionFactory {
 	private Connection createConnection() throws ClassNotFoundException,NamingException,SQLException  {
 		try{
 			Class.forName(PropertyReader.getProperty("driverName"));
-			//con=DriverManager.getConnection(PropertyReader.getProperty("url"), PropertyReader.getProperty("username"),PropertyReader.getProperty("password"));
-			con=DriverManager.getConnection(PropertyReader.getProperty("url"));
+			con=DriverManager.getConnection(PropertyReader.getProperty("url"), PropertyReader.getProperty("username"),PropertyReader.getProperty("password"));
 		}
 		catch(Exception e){
 			e.printStackTrace();
