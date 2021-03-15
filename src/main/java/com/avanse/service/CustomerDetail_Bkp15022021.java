@@ -9,7 +9,6 @@ import java.io.OutputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -21,7 +20,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
 
-import com.avanse.common.util.CommonUtil;
 import com.avanse.ftp.SMBService;
 import com.avanse.model.AddressBean;
 import com.avanse.model.AddressDetails;
@@ -44,15 +42,12 @@ import com.avanse.model.UserReferenceErrorSegment;
 import com.avanse.util.EncryptUtil;
 import com.avanse.util.PropertyReader;
 import com.avanse.util.SocketRequest;
-import com.itextpdf.text.Paragraph;
-import com.itextpdf.text.Rectangle;
-import com.itextpdf.text.pdf.PdfPCell;
 
 import jcifs.smb.NtlmPasswordAuthentication;
 import jcifs.smb.SmbFile;
 import jcifs.smb.SmbFileOutputStream;
 
-public class CustomerDetail {
+public class CustomerDetail_Bkp15022021 {
 
 	private DAOBASE dao = new DAOBASE();
 	Properties prop = null;
@@ -550,7 +545,6 @@ public class CustomerDetail {
 		CibilResponse cibilResponse = null;
 		List<CibilResponse> responseList = new ArrayList<>();
 		List<CibilResponse> tempResponseList = new ArrayList<>();
-		CommonUtil commonUtil = new CommonUtil();
 
 		StringBuilder inputCSV = null;
 
@@ -1578,9 +1572,6 @@ public class CustomerDetail {
 				int willfulDefaultCount = 0;
 				int enqAmount = Integer.parseInt(request.getEnqAmount());
 				double totalObligation = 0;
-				boolean isDpd = false;
-				boolean isWriteOff = false;
-				boolean isWillfullDefault = false;
 				SimpleDateFormat sdf = new SimpleDateFormat("ddMMyyyy");
 
 				if (responseList.get(0).getAccountSegment() != null) {
@@ -1610,7 +1601,6 @@ public class CustomerDetail {
 										|| hist.equals("LSS"))) {
 									if (Integer.parseInt(hist) > 30) {
 										dpdCount++;
-										isDpd = true;
 										break;
 									}
 								}
@@ -1627,7 +1617,6 @@ public class CustomerDetail {
 										|| hist.equals("LSS"))) {
 									if (Integer.parseInt(hist) >= 60) {
 										dpdCount++;
-										isDpd = true;
 										System.out.println("==========dpdCount1="+dpdCount);
 										break;
 									}
@@ -1655,7 +1644,6 @@ public class CustomerDetail {
 						String wilfulDefault = own.getSuitFiledOrWilfulDefault();
 						if (wilfulDefault != null && wilfulDefault.equals("02")) {
 							willfulDefaultCount++;
-							isWillfullDefault = true;
 						}
 						// This line of code is for accType 10(Credit card)
 						System.out.println("accType1="+accType+" writtOffSettStatus1="+writtOffSettStatus+" writtOffCount1="+writtOffCount);
@@ -1667,7 +1655,6 @@ public class CustomerDetail {
 						} else if (writtOffSettStatus != null
 								&& (writtOffSettStatus.equals("02") || writtOffSettStatus.equals("03"))) {
 							writtOffCount++;
-							isWriteOff = true;
 						}
 						try {
 							// These line of code compare account closed date with current date and checks
@@ -1679,134 +1666,109 @@ public class CustomerDetail {
 								diffInMillies = Math
 										.abs(sdf.parse(dateClosed).getTime() - new java.util.Date().getTime());
 								diff = TimeUnit.DAYS.convert(diffInMillies, TimeUnit.MILLISECONDS);
+
 							}
 							if (dateClosed != null && diff <= 180)
 								continue;
 							String sanctionedAmt = own.getHighCreditOrSanctionedAmount();
 							String currentBalance = own.getCurrentBalance();
 							String closeDate = own.getDateClosed();
-							// EMI amount
-							String emiAmount = own.getEMIAmount();
 							// These lines of code get EMI against sanctioned amount to make it part of
 							// total obligation amount based on account type.
 							System.out.println("===================Started obligation calculation==================Record="+count++);
 							double princAmt = Double.parseDouble((sanctionedAmt!=null && sanctionedAmt.trim()!="")?sanctionedAmt:"0");
-							double princCurBal = Double.parseDouble((currentBalance!=null && currentBalance.trim()!="")?currentBalance:"0");
-							// Setting EMI amount if not null
-							System.out.println("Prinicipal Amount princAmt="+princAmt+" princCurBal="+princCurBal+" emiAmount="+emiAmount);
-							// Calculation of obligation if EMI amount > 0 - added on 16/2/2021
-							System.out.println("Logger: srNO="+cibilResponse.getSrNo()+"sanctionedAmt="+sanctionedAmt+ " princCurBal=" +princCurBal + " closeDate=" +closeDate+" EMI="+emiAmount);
-							if((emiAmount!=null && emiAmount.trim()!="") && (closeDate == null || closeDate.trim()=="")) {
-								System.out.println("Entered into if block:EMI>0");
-								try {
-									double emiAmt = Double.parseDouble((emiAmount!=null && emiAmount.trim()!="")?emiAmount:sanctionedAmt);							
-									System.out.println("EMI Amount is emiAmount="+emiAmount);
-									if(emiAmt>0) {
-										System.out.println("EMI Amount is >0 emiAmount="+emiAmount);
-										princAmt = emiAmt;
-										totalObligation += princAmt;
+							double princCurBal = Double.parseDouble((currentBalance!=null && currentBalance.trim()!="")?currentBalance:"0");							
+							if (sanctionedAmt != null && princCurBal>0 && (closeDate == null || closeDate.trim()=="")) {								
+								switch (accType) {
+								// acc type auto loan 01
+								case "01":
+									// Old code to calcluate EMI for auto loan as per old ROI
+									//totalObligation += getEMI(princAmt, 12, 5);
+									// Code added on 8/1/2021 to calculate EMI for auto loan at ROI=2.20%
+									totalObligation += getEMI(princAmt, 2.20, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
+									break;
+								// acc type housing loan 02
+								case "02":
+									// Old code to calcluate EMI for housing loan as per old ROI
+									//totalObligation += getEMI(princAmt, 9, 15);
+									// Code added on 8/1/2021 to calculate EMI for Housing loan at ROI=1%
+									totalObligation += getEMI(princAmt, 1, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
+									break;
+								// acc type Property Loan 03
+								case "03":
+									// Code added on 8/2/2021 to calculate EMI for Property loan at ROI=1%
+									totalObligation += getEMI(princAmt, 1, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
+									break;
+								// acc type personal loan 05
+								case "05":
+									// Old code to calcluate EMI for personal loan as per old ROI
+									//totalObligation += getEMI(princAmt, 14, 3);
+									// Code added on 8/1/2021 to calculate EMI for personal loan at ROI=2.80%
+									totalObligation += getEMI(princAmt, 2.80, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
+									break;
+								// acc type consumer durable 06
+								case "06":
+									// Code added on 14/1/2021 to calculate EMI for consumer durable loan at ROI=9%
+									totalObligation += getEMI(princAmt, 9, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
+									break;
+								// acc type gold 07
+								case "07":
+									// Code added on 14/1/2021 to calculate EMI for gold loan at ROI=1.50%
+									totalObligation += getEMI(princAmt, 1.5, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
+									break;
+								// acc type education loan 8
+								case "08":
+									// Code added on 12/1/2021 to calculate EMI for education loan at ROI=2.80%
+									totalObligation += getEMI(princAmt, 1.80, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
+									break;
+								// acc type credit card 10
+								case "10":
+									// Code added on 12/1/2021 to calculate EMI for credit card at ROI=5%
+									if(princCurBal>0) {
+										princAmt = princCurBal;
 									}
-								}catch (Exception e) {
-									System.out.println("Exception:emiAmount="+e);
-									princAmt = princAmt;
-								}								
-							}else //{
-								// Calculation of obligation if EMI amount < 0 and sanctioned amount >0 - added on 16/2/2021 
-							if (sanctionedAmt != null && princCurBal > 0
-									&& ((closeDate == null || closeDate.trim() == "")
-											&& (emiAmount == null || emiAmount == ""))) {
-									System.out.println("CloseDate=null & sanctionedAmount>0 & emiAmount=null");
-									switch (accType) {
-									// acc type auto loan 01
-									case "01":
-										// Old code to calcluate EMI for auto loan as per old ROI
-										//totalObligation += getEMI(princAmt, 12, 5);
-										// Code added on 8/1/2021 to calculate EMI for auto loan at ROI=2.20%
-										totalObligation += getEMI(princAmt, 2.20, 5);
-										System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
-										break;
-									// acc type housing loan 02
-									case "02":
-										// Old code to calcluate EMI for housing loan as per old ROI
-										//totalObligation += getEMI(princAmt, 9, 15);
-										// Code added on 8/1/2021 to calculate EMI for Housing loan at ROI=1%
-										totalObligation += getEMI(princAmt, 1, 5);
-										System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
-										break;
-									// acc type Property Loan 03
-									case "03":
-										// Code added on 8/2/2021 to calculate EMI for Property loan at ROI=1%
-										totalObligation += getEMI(princAmt, 1, 5);
-										System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
-										break;
-									// acc type personal loan 05
-									case "05":
-										// Old code to calcluate EMI for personal loan as per old ROI
-										//totalObligation += getEMI(princAmt, 14, 3);
-										// Code added on 8/1/2021 to calculate EMI for personal loan at ROI=2.80%
-										totalObligation += getEMI(princAmt, 2.80, 5);
-										System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
-										break;
-									// acc type consumer durable 06
-									case "06":
-										// Code added on 14/1/2021 to calculate EMI for consumer durable loan at ROI=9%
-										totalObligation += getEMI(princAmt, 9, 5);
-										System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
-										break;
-									// acc type gold 07
-									case "07":
-										// Code added on 14/1/2021 to calculate EMI for gold loan at ROI=1.50%
-										totalObligation += getEMI(princAmt, 1.5, 5);
-										System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
-										break;
-									// acc type education loan 8
-									case "08":
-										// Code added on 12/1/2021 to calculate EMI for education loan at ROI=2.80%
-										totalObligation += getEMI(princAmt, 1.80, 5);
-										System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
-										break;
-									// acc type credit card 10
-									case "10":
-										// Code added on 12/1/2021 to calculate EMI for credit card at ROI=5%
-										if(princCurBal>0) {
-											princAmt = princCurBal;
-										}
-										totalObligation += getEMI(princAmt, 5, 5);
-										System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
-										break;
-									// acc type two wheeler 13
-									case "13":
-										// Code added on 14/1/2021 to calculate EMI for two wheeler loan at ROI=4.30%
-										totalObligation += getEMI(princAmt, 4.30, 5);
-										System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
-										break;
-									// acc type commercial vehicle 17
-									case "17":
-										// Code added on 18/1/2021 to calculate EMI for commercial vehicle loan at ROI=2.4%
-										totalObligation += getEMI(princAmt, 2.4, 5);
-										System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
-										break;
-									// acc type business loan 51 to 60
-									case "51":
-									case "52":
-									case "53":
-									case "54":
-									case "55":
-									case "56":
-									case "57":
-									case "58":
-									case "59":
-									case "60":
-										// Old code to calcluate EMI for business loan as per old ROI
-										//totalObligation += getEMI(princAmt, 18, 3);
-										// Code added on 8/1/2021 to calculate EMI for business loan at ROI=3.50%
-										totalObligation += getEMI(princAmt, 3.50, 5);
-										System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
-										break;
-									}
-	
+									totalObligation += getEMI(princAmt, 5, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
+									break;
+								// acc type two wheeler 13
+								case "13":
+									// Code added on 14/1/2021 to calculate EMI for two wheeler loan at ROI=4.30%
+									totalObligation += getEMI(princAmt, 4.30, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
+									break;
+								// acc type commercial vehicle 17
+								case "17":
+									// Code added on 18/1/2021 to calculate EMI for commercial vehicle loan at ROI=2.4%
+									totalObligation += getEMI(princAmt, 2.4, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
+									break;
+								// acc type business loan 51 to 60
+								case "51":
+								case "52":
+								case "53":
+								case "54":
+								case "55":
+								case "56":
+								case "57":
+								case "58":
+								case "59":
+								case "60":
+									// Old code to calcluate EMI for business loan as per old ROI
+									//totalObligation += getEMI(princAmt, 18, 3);
+									// Code added on 8/1/2021 to calculate EMI for business loan at ROI=3.50%
+									totalObligation += getEMI(princAmt, 3.50, 5);
+									System.out.println("Account Type="+accType+" princAmt="+princAmt+" totalObligation="+totalObligation);
+									break;
 								}
-							//}
+
+							}
 						} catch (NumberFormatException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
@@ -1851,7 +1813,6 @@ public class CustomerDetail {
 										|| hist.equals("LSS"))) {
 									if (Integer.parseInt(hist) >= 60) {
 										dpdCount++;
-										isDpd = true;
 										System.out.println("==========dpdCount3="+dpdCount);
 										break;
 									}
@@ -1865,7 +1826,6 @@ public class CustomerDetail {
 										|| hist.equals("LSS"))) {
 									if (Integer.parseInt(hist) >= 60) {
 										dpdCount++;
-										isDpd = true;
 										System.out.println("==========dpdCount4="+dpdCount);
 										break;
 									}
@@ -1879,12 +1839,10 @@ public class CustomerDetail {
 						if (writtOffSettStatus != null
 								&& (writtOffSettStatus.equals("02") || writtOffSettStatus.equals("03"))) {
 							writtOffCount++;
-							isWriteOff = true;
 						}
 						System.out.println("writtOffSettStatus="+writtOffSettStatus+" writtOffCount="+writtOffCount);
 						if (wilfulDefault != null && wilfulDefault.equals("02")) {
 							willfulDefaultCount++;
-							isWillfullDefault = true;
 						}
 						System.out.println("wilfulDefault="+wilfulDefault+" willfulDefaultCount="+willfulDefaultCount);
 					}
@@ -1946,24 +1904,7 @@ public class CustomerDetail {
 						}
 					}
 				}
-				// Set band in cibil response 11/3/2021 ----
-				String band = commonUtil.getCibilBand(score, cibilResponse.getSrNo());
-				cibilResponse.setBand(band);
-				// End of setting CIBIL band -----
-				// Setting enquries in cibil response
-				HashMap<String, String> enquries = commonUtil.getEnquries(cibilResponse);
-				String past30daysEnq = enquries.get("past30daysEnq");
-				String past12MonthsEnq = enquries.get("past12MonthsEnq");
-				String past24MonthsEnq = enquries.get("past24MonthsEnq");
-				System.out.println("Enquries:past30daysEnq=" + past30daysEnq + " past12MonthsEnq=" + past12MonthsEnq
-						+ " past24MonthsEnq=" + past24MonthsEnq);
-				cibilResponse.setPast12MonthsEnq(past12MonthsEnq);
-				cibilResponse.setPast24MonthsEnq(past24MonthsEnq);
-				cibilResponse.setPast30daysEnq(past30daysEnq);
-				cibilResponse.setDescription(commonUtil.getRejectRemarks(isWriteOff, isDpd, cibilResponse.getSrNo(), isWillfullDefault));
-				// End of setting enquries count in response ---
-
-				System.out.println("SrNO="+cibilResponse.getSrNo()+ " Final dpdCount="+dpdCount+" writtOffCount="+writtOffCount+" Score="+score+" band="+band);
+				System.out.println("Final dpdCount="+dpdCount+" writtOffCount="+writtOffCount+" Score="+score);
 				cibilResponse.setTotalObligation(Math.round(totalObligation));
 				responseList = new ArrayList<CibilResponse>();
 				responseList.add(cibilResponse);
@@ -2086,7 +2027,7 @@ public class CustomerDetail {
 
 	public List<Error> validateHeaderInfo(Map<String, String> headers, HttpServletRequest httpRequest) {
 		List<Error> errorList = new ArrayList<Error>();
-		CustomerDetail customerDetail = null;
+		CustomerDetail_Bkp15022021 customerDetail = null;
 
 		String user_id = headers.get("user_id");
 		String auth_key = headers.get("auth_key");
@@ -2101,7 +2042,7 @@ public class CustomerDetail {
 				// This line of code decrypt auth_key header.
 				auth_key = EncryptUtil.decryptString(auth_key, "");
 
-				customerDetail = new CustomerDetail();
+				customerDetail = new CustomerDetail_Bkp15022021();
 
 				// This line of code verify auth_key and userId aginst database.
 				String check = customerDetail.verifyUserIdAuthKey(user_id, auth_key, resp_type);
@@ -2368,5 +2309,5 @@ public class CustomerDetail {
 			return responseList;
 		}
 		return responseList;
-	}
+	}	
 }

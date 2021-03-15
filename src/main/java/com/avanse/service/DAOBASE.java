@@ -259,7 +259,10 @@ public class DAOBASE {
 
 		// String query = "select const_value from ilm_gl_const_params where const_code
 		// = 'CIBIL_USER_ID'";
+		// UAT Query
 		String query = "SELECT Member_Id FROM PLF_13_01_2021..Cibil_Member_Details WHERE Segment_Type='RETAIL'";
+		// Production Query
+		//String query = "SELECT Member_Id FROM PLF..Cibil_Member_Details WHERE Segment_Type='RETAIL'";
 		try {
 			Connection con = ConnectionFactory.getConnection();
 			Statement st = con.createStatement();
@@ -283,7 +286,10 @@ public class DAOBASE {
 
 		// String query = "select const_value from ilm_gl_const_params where const_code
 		// = 'CIBIL_USER_PWD'";
+		// UAT Query
 		String query = "SELECT Member_Password FROM PLF_13_01_2021..Cibil_Member_Details WHERE Segment_Type='RETAIL'";
+		// Production Query
+		//String query = "SELECT Member_Password FROM PLF..Cibil_Member_Details WHERE Segment_Type='RETAIL'";
 		try {
 			Connection con = ConnectionFactory.getConnection();
 			Statement st = con.createStatement();
