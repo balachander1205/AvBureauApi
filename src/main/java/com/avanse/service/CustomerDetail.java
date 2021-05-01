@@ -1962,6 +1962,11 @@ public class CustomerDetail {
 				cibilResponse.setPast30daysEnq(past30daysEnq);
 				cibilResponse.setDescription(commonUtil.getRejectRemarks(isWriteOff, isDpd, cibilResponse.getSrNo(), isWillfullDefault));
 				// End of setting enquries count in response ---
+				// Setting additionalMatch param in cibil response. - 19/3/2021
+				System.out.println("------isAdditionalMatch="+cibilResponse.getAdditionalMatch());
+				String isAdditionalMatch = commonUtil.isAdditionalMatch(tempResponseList, cibilResponse.getSrNo());
+				cibilResponse.setAdditionalMatch(isAdditionalMatch);
+				
 
 				System.out.println("SrNO="+cibilResponse.getSrNo()+ " Final dpdCount="+dpdCount+" writtOffCount="+writtOffCount+" Score="+score+" band="+band);
 				cibilResponse.setTotalObligation(Math.round(totalObligation));
@@ -1970,6 +1975,15 @@ public class CustomerDetail {
 				System.out.println("Final cibilResponse Response= "+cibilResponse);
 				// Code added on 20/1/2021 to save pdf report to folder for easy access.
 				responseList = getCibilReportContent(tempResponseList, cibilResponse, headers.get("user_id"), responseList);
+				return responseList;
+			}
+			// Getting response for DIGAKJB partner
+			// Code added on 24/3/2021
+			if(resp_type == 9) {
+				System.out.println("--- entered resp_type=9 ------");
+				ResponseType9 responseType9 = new ResponseType9();
+				responseList = responseType9.getResponseType09(id, headers, score, responseList);
+				System.out.println("--- end of processing resp_type=9 ------");
 				return responseList;
 			}
 
@@ -2151,7 +2165,8 @@ public class CustomerDetail {
 		if (resp_type == null || "".equals(resp_type)
 				|| !("00".equals(resp_type) || "01".equals(resp_type) || "02".equals(resp_type)
 						|| "03".equals(resp_type) || "04".equals(resp_type) || "05".equals(resp_type)
-						|| "06".equals(resp_type) || "07".equals(resp_type)|| "08".equals(resp_type))) {
+						|| "06".equals(resp_type) || "07".equals(resp_type)|| "08".equals(resp_type)
+						|| "09".equals(resp_type))) {
 			Error error = new Error("110", "Invalid Header Response Type value");
 			errorList.add(error);
 		} else if ("05".equals(resp_type)) {

@@ -1,14 +1,18 @@
 package com.avanse.common.util;
 
+import java.io.ByteArrayOutputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import com.avanse.ftp.SMBService;
 import com.avanse.model.CibilResponse;
 import com.avanse.model.EnquiryBean;
+import com.avanse.service.ParseCibilResponse;
 
 public class CommonUtil {
 	/*
@@ -124,9 +128,9 @@ public class CommonUtil {
 				band = "4";
 			} else if (score >= 721 && score <= 730) {
 				band = "5";
-			} else if (score >= 731 && score <= 740) {
+			} else if (score >= 731 && score <= 735) {
 				band = "6";
-			} else if (score >= 741 && score <= 750) {
+			} else if (score >= 736 && score <= 750) {
 				band = "7";
 			} else if (score >= 751 && score <= 766) {
 				band = "8";
@@ -164,5 +168,62 @@ public class CommonUtil {
 			System.out.println("Xception:getRejectRemarks:srNo="+String.valueOf(srNo) + " error=" + e);
 		}
 		return desc;
+	}
+	
+	/*
+	 * isAdditionalMatch
+	 * @Param responseList
+	 * @Param srNo
+	 * return
+	 * -- Method to check Additional match for cibil response. - 19/3/2021
+	 * */
+	public String isAdditionalMatch(List<CibilResponse> responseList, long srNo) {
+		String FLAG = "false";
+		try {
+			for (int j = 0; j < responseList.size(); j++) {
+				CibilResponse cibilResponse = responseList.get(j);
+				if (j > 0) {
+					FLAG = "true";
+				}				
+			}
+		} catch (Exception e) {
+			System.out.println("Xception:isAdditionalMatch:srNo=" + String.valueOf(srNo) + " error=" + e);
+		}
+		return FLAG;
+	}
+	
+	// Code added on 03/02/2021 with new EMI
+	/*
+	 * getEMI
+	 * @Param principal
+	 * @Param rate
+	 * @Param time
+	 * return
+	 * -- Method to calculate EMI
+	 * */
+	public double getEMI(double principal, double rate, double time) {
+		double emi = (principal * rate) / 100;
+		return emi;
+	}
+	
+	public List<CibilResponse> getCibilReportContent(List<CibilResponse> responseListTemp, CibilResponse cibilResponse,
+			String userId, List<CibilResponse> responseList) {
+		// Code added on 20/1/2021 to save pdf report to folder for easy access.
+		try {
+			ParseCibilResponse parseCibilResponse = new ParseCibilResponse();
+			// getting PDF content as ByteArrayOutputStream
+			ByteArrayOutputStream out = parseCibilResponse.getCibilReport(responseListTemp);
+			System.out.println("Started saving PDF report to folder..Srno=" + cibilResponse.getSrNo());
+			// saving PDF to folder
+			SMBService smbService = new SMBService();
+			// savePdfFileToFolder(cibilResponse.getPdfContent(), cibilResponse.getSrNo() +
+			// ".pdf", out);
+			smbService.saveCIBILReportToFolder(cibilResponse.getSrNo() + ".pdf", out, userId);
+			System.out.println("Completed saving PDF report to folder..Srno=" + cibilResponse.getSrNo());
+		} catch (Exception e) {
+			System.out.println("Exception:While saving PDF tp folder=" + e);
+			return responseList;
+		}
+		return responseList;
 	}
 }

@@ -38,6 +38,7 @@ public class CibilResponse {
 	public String past12MonthsEnq;
 	public String past24MonthsEnq;
 	public String description;
+	public String additionalMatch;
 
 	public Long getTotalObligation() {
 		return totalObligation;
@@ -277,6 +278,14 @@ public class CibilResponse {
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	public String getAdditionalMatch() {
+		return additionalMatch;
+	}
+
+	public void setAdditionalMatch(String additionalMatch) {
+		this.additionalMatch = additionalMatch;
 	}
 
 }
